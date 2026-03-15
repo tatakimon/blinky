@@ -1,0 +1,1 @@
+st-flash --serial "0047001F3133511037363734" --reset write "firmware.bin" 0x08000000

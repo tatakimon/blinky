@@ -1,0 +1,26 @@
+You are fixing a bare-metal STM32U575/U585 project.
+
+STRICT RULES:
+- You may ONLY change main.c (do not modify Makefile/linker.ld/startup.s/test_runner.py).
+- Do NOT add any new headers like stm32u5xx.h.
+- Do NOT use __attribute__((constructor)) or HAL.
+- Keep USART2 on PD5/PD6 AF7 @115200.
+- The firmware must print the exact token repeatedly: "STWINBX1_ON_LINE\n".
+- Use LEDs: PH12 green heartbeat toggle; PH10 orange pulse on RX 'p' (optional).
+- Make token appear even if host opens UART late (print in main loop, not only at boot).
+
+Task:
+Return a FULL replacement for main.c.
+
+Format EXACTLY:
+===BEGIN_MAIN_C===
+<full file>
+===END_MAIN_C===
+
+Verification log:
+[verify] port=/dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0047001F3133511037363734-if01
+[verify] baud=115200
+[verify] token=b'STWINBX1_ON_LINE\n'
+[verify] timeout=10.0s
+[verify] ❌ timeout; last bytes=b'\x80\x80\x80\x80\xf8\x80\x80\x80\x80\x80\xf8\xf8\x80\x80\x80\x80\x80\x80\xf8\x80\x80\x80\x80\x80\xf8\xf8\x80\x80\x80\x80\x80\x80'
+

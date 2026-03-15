@@ -1,0 +1,14 @@
+st-flash 1.8.0
+file firmware.bin md5 checksum: cd93d6c87b54d6bfeb53e4e6e5d37f7, stlink checksum: 0x00009822
+-> Flash page at 0x8000000 erased (size: 0x2000)
+
+st-flash 1.8.0
+
+2026-02-16T12:14:30 INFO common.c: STM32U575_U585: 786 KiB SRAM, 2048 KiB flash in at least 8 KiB pages.
+2026-02-16T12:14:30 INFO common_flash.c: Attempting to write 448 (0x1c0) bytes to stm32 address: 134217728 (0x8000000)
+2026-02-16T12:14:30 INFO flash_loader.c: Starting Flash write for WB/G0/G4/L5/U5/H5/C0
+2026-02-16T12:14:30 INFO common_flash.c: Starting verification of write complete
+2026-02-16T12:14:30 INFO common_flash.c: Flash written and verified! jolly good!
+2026-02-16T12:14:30 INFO common.c: Go to Thumb mode
+2026-02-16T12:14:30 INFO common.c: STM32U575_U585: 786 KiB SRAM, 2048 KiB flash in at least 8 KiB pages.
+2026-02-16T12:14:30 INFO common.c: Go to Thumb mode

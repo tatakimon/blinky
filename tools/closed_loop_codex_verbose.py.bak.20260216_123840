@@ -1,0 +1,346 @@
+#!/usr/bin/env python3
+import os, sys, time, glob, shutil, hashlib, pathlib, subprocess, textwrap, difflib
+
+# -------- Config (env overrides) ----------
+MAX_TRIES      = int(os.getenv("MAX_TRIES", "5"))
+UART_BAUD      = int(os.getenv("UART_BAUD", "115200"))
+UART_TOKEN_STR = os.getenv("UART_TOKEN", "STWINBX1_ON_LINE")
+UART_TOKEN     = (UART_TOKEN_STR + "\n").encode() if not UART_TOKEN_STR.endswith("\n") else UART_TOKEN_STR.encode()
+UART_TIMEOUT   = float(os.getenv("UART_TIMEOUT", "10"))
+UART_PORT_ENV  = os.getenv("UART_PORT", "").strip()
+
+STLINK_SERIAL  = os.getenv("STLINK_SERIAL", "").strip()  # optional
+FLASH_ADDR     = os.getenv("FLASH_ADDR", "0x08000000")
+BIN            = os.getenv("FW_BIN", "firmware.bin")
+
+CODEX          = os.getenv("CODEX_CMD", "codex")
+SCHEMATIC      = os.getenv("SCHEMATIC_PATH", "docs/schematics.png")  # optional
+
+LOGS_DIR       = pathlib.Path("logs")
+VERS_DIR       = pathlib.Path("versions")
+HISTORY_MD     = LOGS_DIR / "history.md"
+
+KEY_FILES = [
+  "main.c", "startup.s", "linker.ld", "Makefile",
+  "test_runner.py", "autonomous_agent.py",
+  "AGENTS.md", "PROJECT_STATE.md", "planning.md"
+]
+
+def run(args, *, cwd=None, timeout=None, input_text=None):
+  """Run without shell to avoid quoting issues."""
+  return subprocess.run(
+    args,
+    cwd=cwd,
+    text=True,
+    input=input_text,
+    capture_output=True,
+    timeout=timeout
+  )
+
+def sha256_file(p: pathlib.Path) -> str:
+  h = hashlib.sha256()
+  with p.open("rb") as f:
+    for chunk in iter(lambda: f.read(1024 * 1024), b""):
+      h.update(chunk)
+  return h.hexdigest()
+
+def snapshot(dst_dir: pathlib.Path, label: str):
+  """Copy key files and store a manifest."""
+  dst = dst_dir / label
+  dst.mkdir(parents=True, exist_ok=True)
+  manifest = []
+  for rel in KEY_FILES:
+    src = pathlib.Path(rel)
+    if src.exists() and src.is_file():
+      out = dst / rel
+      out.parent.mkdir(parents=True, exist_ok=True)
+      shutil.copy2(src, out)
+      manifest.append({"file": rel, "sha256": sha256_file(out), "bytes": out.stat().st_size})
+  (dst / "MANIFEST.txt").write_text("\n".join([f"{m['sha256']}  {m['file']}  ({m['bytes']} bytes)" for m in manifest]) + "\n")
+  return dst
+
+def diff_dirs(pre: pathlib.Path, post: pathlib.Path, out_patch: pathlib.Path):
+  """Unified diff for key files (pre vs post)."""
+  patches = []
+  for rel in KEY_FILES:
+    a = pre / rel
+    b = post / rel
+    if not a.exists() and not b.exists():
+      continue
+    a_text = a.read_text(errors="ignore").splitlines(keepends=True) if a.exists() else []
+    b_text = b.read_text(errors="ignore").splitlines(keepends=True) if b.exists() else []
+    if a_text == b_text:
+      continue
+    patches.extend(difflib.unified_diff(a_text, b_text, fromfile=f"pre/{rel}", tofile=f"post/{rel}"))
+  out_patch.write_text("".join(patches), errors="ignore")
+
+def pick_uart_port():
+  if UART_PORT_ENV:
+    return UART_PORT_ENV
+
+  # Prefer stable by-id STLINK VCP interface (often if01 -> ttyACM0)
+  by_id = sorted(glob.glob("/dev/serial/by-id/*STLINK*if01*"))
+  if by_id:
+    return by_id[0]
+
+  # fallback: any by-id
+  any_by_id = sorted(glob.glob("/dev/serial/by-id/*"))
+  if any_by_id:
+    return any_by_id[0]
+
+  # fallback common
+  for p in ["/dev/ttyACM0","/dev/ttyACM1","/dev/ttyUSB0","/dev/ttyUSB1"]:
+    if os.path.exists(p):
+      return p
+  return None
+
+def uart_verify(attempt_dir: pathlib.Path):
+  import serial
+  port = pick_uart_port()
+  if not port:
+    return (2, "", "No UART port found. Set UART_PORT=/dev/ttyACM0 or use /dev/serial/by-id.")
+
+  info = []
+  info.append(f"[verify] port={port}")
+  info.append(f"[verify] baud={UART_BAUD}")
+  info.append(f"[verify] token={UART_TOKEN!r}")
+  info.append(f"[verify] timeout={UART_TIMEOUT}s")
+
+  # Save current by-id listing for traceability
+  by_id_listing = "\n".join(sorted(glob.glob("/dev/serial/by-id/*")))
+  (attempt_dir / "uart_devices.txt").write_text(by_id_listing + "\n", errors="ignore")
+
+  buf = b""
+  try:
+    with serial.Serial(port, UART_BAUD, timeout=0.1) as ser:
+      # flush
+      try:
+        ser.reset_input_buffer()
+        ser.reset_output_buffer()
+      except Exception:
+        pass
+
+      end = time.time() + UART_TIMEOUT
+      while time.time() < end:
+        chunk = ser.read(256)
+        if chunk:
+          buf += chunk
+          if UART_TOKEN in buf:
+            info.append("[verify] ✅ token seen")
+            return (0, "\n".join(info), "")
+        time.sleep(0.05)
+  except Exception as e:
+    return (3, "\n".join(info), f"UART open/read failed: {e}")
+
+  tail = buf[-400:]
+  info.append(f"[verify] ❌ timeout; last bytes={tail!r}")
+  return (1, "\n".join(info), "")
+
+def build(attempt_dir: pathlib.Path):
+  p = run(["bash","-lc","make clean && make"], timeout=180)
+  (attempt_dir / "build_stdout.txt").write_text(p.stdout or "", errors="ignore")
+  (attempt_dir / "build_stderr.txt").write_text(p.stderr or "", errors="ignore")
+  return p
+
+def flash(attempt_dir: pathlib.Path):
+  # include st-info snapshot
+  p_info = run(["bash","-lc","st-info --probe"], timeout=30)
+  (attempt_dir / "st_info.txt").write_text((p_info.stdout or "") + "\n" + (p_info.stderr or ""), errors="ignore")
+
+  serial_flag = f'--serial "{STLINK_SERIAL}" ' if STLINK_SERIAL else ""
+  cmd = f'st-flash {serial_flag}--reset write "{BIN}" {FLASH_ADDR}'
+  p = run(["bash","-lc", cmd], timeout=90)
+  (attempt_dir / "flash_stdout.txt").write_text(p.stdout or "", errors="ignore")
+  (attempt_dir / "flash_stderr.txt").write_text(p.stderr or "", errors="ignore")
+  return p, cmd
+
+def ensure_codex_available():
+  p = run([CODEX, "--version"], timeout=10)
+  if p.returncode != 0:
+    print("ERROR: codex CLI not found or not runnable. Install and login first:", file=sys.stderr)
+    print("  npm i -g @openai/codex", file=sys.stderr)
+    print("  codex login --device-auth", file=sys.stderr)
+    return False
+  return True
+
+def codex_fix(attempt_dir: pathlib.Path, failure_kind: str, logs_text: str, tried_before: str):
+  """
+  Calls: codex exec --sandbox workspace-write -a never -o <file> - (stdin prompt)
+  """
+  prompt = textwrap.dedent(f"""
+  You are an autonomous embedded firmware agent working on STM32U575/U585 (chipid 0x482).
+
+  HARD FACTS (do not change):
+  - UART must be USART2 on PD5=TX (AF7) and PD6=RX (AF7)
+  - Baud must be {UART_BAUD}
+  - Firmware must print token exactly: {UART_TOKEN_STR}\\n  (on boot)
+
+  Goal:
+  - Make the closed-loop pass: build -> flash -> UART token seen.
+  - You will get logs each attempt; propose a NEW hypothesis and apply a different fix if previous ones failed.
+  - Keep changes minimal.
+
+  Format your reply starting with these 4 lines (exact labels):
+  HYPOTHESIS: <short>
+  CHANGE: <short>
+  FILES: <comma-separated list>
+  NEXT: <what to expect in verify>
+
+  Previously tried (do NOT repeat the same hypothesis):
+  {tried_before or "(none)"}
+
+  Failure type: {failure_kind}
+
+  Logs (most relevant):
+  ----------------
+  {logs_text}
+  ----------------
+
+  If needed, consult schematic (if attached) for UART pins; but PD5/PD6 is already confirmed.
+  """).strip()
+
+  (attempt_dir / "codex_prompt.txt").write_text(prompt + "\n", errors="ignore")
+
+  out_last = attempt_dir / "codex_last_message.md"
+
+  args = [CODEX, "exec",
+          "--skip-git-repo-check",
+          "--sandbox", "workspace-write",
+          "--ask-for-approval", "never",
+          "--output-last-message", str(out_last)]
+  # attach schematic if present
+  if os.path.exists(SCHEMATIC):
+    args += ["--image", SCHEMATIC]
+
+  # prompt from stdin via "-" per reference
+  args += ["-"]  # read stdin prompt :contentReference[oaicite:1]{index=1}
+
+  print(f"[codex] running: {' '.join(args)}")
+  p = run(args, timeout=900, input_text=prompt)
+
+  (attempt_dir / "codex_stdout.txt").write_text(p.stdout or "", errors="ignore")
+  (attempt_dir / "codex_stderr.txt").write_text(p.stderr or "", errors="ignore")
+
+  last_msg = out_last.read_text(errors="ignore") if out_last.exists() else ""
+  return p.returncode, last_msg
+
+def read_tried_history():
+  if not HISTORY_MD.exists():
+    return ""
+  return HISTORY_MD.read_text(errors="ignore").strip()
+
+def append_history(attempt: int, codex_last: str):
+  # store only the top few lines (what it "thought" / method) for quick reading
+  lines = [ln.strip() for ln in codex_last.splitlines() if ln.strip()]
+  head = "\n".join(lines[:8])  # short
+  HISTORY_MD.parent.mkdir(parents=True, exist_ok=True)
+  with HISTORY_MD.open("a", encoding="utf-8") as f:
+    f.write(f"\n\n## Attempt {attempt}\n{head}\n")
+
+def main():
+  if not ensure_codex_available():
+    return 20
+
+  # Ensure directories
+  LOGS_DIR.mkdir(exist_ok=True)
+  VERS_DIR.mkdir(exist_ok=True)
+
+  # show UART device mapping upfront
+  by_id = glob.glob("/dev/serial/by-id/*")
+  print("[info] /dev/serial/by-id:")
+  for p in sorted(by_id):
+    try:
+      target = os.readlink(p)
+      print(f"  {p} -> {target}")
+    except OSError:
+      print(f"  {p}")
+
+  tried_before = read_tried_history()
+
+  for attempt in range(1, MAX_TRIES + 1):
+    attempt_dir = LOGS_DIR / f"attempt_{attempt:02d}"
+    attempt_dir.mkdir(parents=True, exist_ok=True)
+    vers_dir = VERS_DIR / f"attempt_{attempt:02d}"
+    vers_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"\n=== Attempt {attempt}/{MAX_TRIES} ===")
+
+    pre = snapshot(vers_dir, "pre")
+
+    # 1) BUILD
+    print("[step] build: make clean && make")
+    b = build(attempt_dir)
+    if b.returncode != 0:
+      print("[result] BUILD FAIL")
+      log_text = (b.stderr or "")[-6000:] + "\n" + (b.stdout or "")[-2000:]
+      rc, last = codex_fix(attempt_dir, "BUILD_FAIL", log_text, tried_before)
+      post = snapshot(vers_dir, "post")
+      diff_dirs(pre, post, attempt_dir / "diff.patch")
+      if last:
+        print("[codex] last message (top):")
+        print("\n".join(last.splitlines()[:10]))
+        append_history(attempt, last)
+        tried_before = read_tried_history()
+      else:
+        print("[codex] No last message captured. Check logs/attempt_XX/codex_stderr.txt")
+      continue
+
+    # 2) FLASH
+    print(f"[step] flash: st-flash --reset write {BIN} {FLASH_ADDR}")
+    f, fcmd = flash(attempt_dir)
+    if f.returncode != 0:
+      print("[result] FLASH FAIL")
+      log_text = fcmd + "\n\n" + (f.stderr or "")[-6000:] + "\n" + (f.stdout or "")[-2000:]
+      rc, last = codex_fix(attempt_dir, "FLASH_FAIL", log_text, tried_before)
+      post = snapshot(vers_dir, "post")
+      diff_dirs(pre, post, attempt_dir / "diff.patch")
+      if last:
+        print("[codex] last message (top):")
+        print("\n".join(last.splitlines()[:10]))
+        append_history(attempt, last)
+        tried_before = read_tried_history()
+      else:
+        print("[codex] No last message captured. Check logs/attempt_XX/codex_stderr.txt")
+      continue
+
+    # 3) VERIFY
+    print("[step] verify: UART wait token")
+    try:
+      import serial  # noqa
+    except Exception:
+      print("ERROR: pyserial missing. Run: pip install pyserial", file=sys.stderr)
+      return 11
+
+    rc_v, vout, verr = uart_verify(attempt_dir)
+    (attempt_dir / "verify.txt").write_text(vout + "\n" + verr, errors="ignore")
+
+    if rc_v == 0:
+      print(vout)
+      print("[done] ✅ Closed loop passed.")
+      post = snapshot(vers_dir, "post")
+      diff_dirs(pre, post, attempt_dir / "diff.patch")
+      return 0
+
+    print("[result] VERIFY FAIL (timeout/no token)")
+    print(vout)
+
+    # Ask Codex to try a NEW method
+    log_text = vout + "\n" + verr + "\n\n(Flash OK, build OK. UART token missing.)"
+    rc, last = codex_fix(attempt_dir, "UART_VERIFY_FAIL", log_text, tried_before)
+    post = snapshot(vers_dir, "post")
+    diff_dirs(pre, post, attempt_dir / "diff.patch")
+
+    if last:
+      print("[codex] last message (top):")
+      print("\n".join(last.splitlines()[:10]))
+      append_history(attempt, last)
+      tried_before = read_tried_history()
+    else:
+      print("[codex] No last message captured. Check logs/attempt_XX/codex_stderr.txt")
+
+  print("\n[done] ❌ Gave up after MAX_TRIES.")
+  print(f"See {HISTORY_MD} for what was tried, and logs/attempt_XX + versions/attempt_XX for diffs.")
+  return 1
+
+if __name__ == "__main__":
+  raise SystemExit(main())

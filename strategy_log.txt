@@ -1,0 +1,8 @@
+Start task: STM32U585AI (STWIN.box) strict rules: edit only Dell_2_Steval/Core/Src/main.c and only STM32Cube USER CODE blocks; do not modify MX_* calls, SystemClock_Config, or generated code; use existing USART2 setup (PD5/PD6, 115200), GREEN LED=PH12, ORANGE LED=PH10. Request: confirming no-change Layer A baseline rerun only; if already valid, do not change code.
+UART token: STWINBX1_ON_LINE
+UART token source: cli-arg
+UART port: /dev/ttyACM0
+UART port source: auto-detect
+UART baud: 115200
+UART timeout: 8
+Max retries: 1

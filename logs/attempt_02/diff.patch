@@ -1,0 +1,143 @@
+--- /home/kerem/stm32_sim_lab/blinky/versions/attempt_02/pre/main.c	2026-02-17 16:19:07.094779400 +0100
++++ /home/kerem/stm32_sim_lab/blinky/versions/attempt_02/post/main.c	2026-02-17 16:21:30.942434465 +0100
+@@ -2,14 +2,14 @@
+ 
+ #define TOKEN "STWINBX1_ON_LINE\n"
+ 
+-/* STM32U575/U585 base addresses */
++/* STM32U575/U585 peripheral base addresses */
+ #define RCC_BASE        0x46020C00UL
+-#define USART2_BASE     0x40004400UL
+ #define GPIO_AHB2_BASE  0x42020000UL
+ #define GPIOD_BASE      (GPIO_AHB2_BASE + 0x0C00UL)
+ #define GPIOH_BASE      (GPIO_AHB2_BASE + 0x1C00UL)
++#define USART2_BASE     0x40004400UL
+ 
+-/* RCC register offsets */
++/* RCC registers */
+ #define RCC_CR          (*(volatile uint32_t *)(RCC_BASE + 0x000UL))
+ #define RCC_AHB2ENR1    (*(volatile uint32_t *)(RCC_BASE + 0x08CUL))
+ #define RCC_APB1ENR1    (*(volatile uint32_t *)(RCC_BASE + 0x09CUL))
+@@ -25,15 +25,15 @@
+ #define RCC_CCIPR1_USART2SEL_Msk    (3UL << RCC_CCIPR1_USART2SEL_Pos)
+ #define RCC_CCIPR1_USART2SEL_HSI16  (2UL << RCC_CCIPR1_USART2SEL_Pos)
+ 
+-/* USART bits */
++/* GPIO/USART bitfields */
+ #define USART_CR1_UE                (1UL << 0)
+ #define USART_CR1_RE                (1UL << 2)
+ #define USART_CR1_TE                (1UL << 3)
++
+ #define USART_ISR_RXNE_RXFNE        (1UL << 5)
+ #define USART_ISR_TC                (1UL << 6)
+ #define USART_ISR_TXE_TXFNF         (1UL << 7)
+ 
+-/* GPIO + USART register layout */
+ typedef struct {
+   volatile uint32_t MODER;
+   volatile uint32_t OTYPER;
+@@ -76,7 +76,7 @@
+ static void leds_init(void) {
+   RCC_AHB2ENR1 |= RCC_AHB2ENR1_GPIOHEN;
+ 
+-  /* PH12 green, PH10 orange -> output mode */
++  /* PH12 (green) + PH10 (orange) output */
+   GPIOH->MODER &= ~((3UL << (12U * 2U)) | (3UL << (10U * 2U)));
+   GPIOH->MODER |=  ((1UL << (12U * 2U)) | (1UL << (10U * 2U)));
+ 
+@@ -97,17 +97,10 @@
+   GPIOH->BSRR = (1UL << (10U + 16U));
+ }
+ 
+-static void uart2_init_115200_pd5_pd6(void) {
+-  RCC_CR |= RCC_CR_HSION;
+-  while ((RCC_CR & RCC_CR_HSIRDY) == 0U) {
+-  }
+-
++static void uart2_gpio_init_pd5_pd6_af7(void) {
+   RCC_AHB2ENR1 |= RCC_AHB2ENR1_GPIODEN;
+-  RCC_APB1ENR1 |= RCC_APB1ENR1_USART2EN;
+-
+-  RCC_CCIPR1 = (RCC_CCIPR1 & ~RCC_CCIPR1_USART2SEL_Msk) | RCC_CCIPR1_USART2SEL_HSI16;
+ 
+-  /* PD5/PD6 alternate function AF7 (USART2 TX/RX) */
++  /* PD5 TX, PD6 RX -> AF7 */
+   GPIOD->MODER &= ~((3UL << (5U * 2U)) | (3UL << (6U * 2U)));
+   GPIOD->MODER |=  ((2UL << (5U * 2U)) | (2UL << (6U * 2U)));
+ 
+@@ -117,15 +110,31 @@
+ 
+   GPIOD->AFR[0] &= ~((0xFUL << (5U * 4U)) | (0xFUL << (6U * 4U)));
+   GPIOD->AFR[0] |=  ((7UL   << (5U * 4U)) | (7UL   << (6U * 4U)));
++}
+ 
++static void uart2_set_brr_and_enable(uint32_t brr) {
+   USART2->CR1 = 0U;
+   USART2->CR2 = 0U;
+   USART2->CR3 = 0U;
+-  USART2->PRESC = 0U;   /* /1 prescaler */
+-  USART2->BRR = 139U;   /* 16 MHz / 115200 */
++  USART2->PRESC = 0U; /* prescaler /1 */
++  USART2->BRR = brr;
+   USART2->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+ }
+ 
++static void uart2_init(void) {
++  RCC_CR |= RCC_CR_HSION;
++  while ((RCC_CR & RCC_CR_HSIRDY) == 0U) {
++  }
++
++  RCC_APB1ENR1 |= RCC_APB1ENR1_USART2EN;
++
++  /* Try to select HSI16 as USART2 kernel clock (safe even if already set). */
++  RCC_CCIPR1 = (RCC_CCIPR1 & ~RCC_CCIPR1_USART2SEL_Msk) | RCC_CCIPR1_USART2SEL_HSI16;
++
++  uart2_gpio_init_pd5_pd6_af7();
++  uart2_set_brr_and_enable(139U); /* 16 MHz / 115200 */
++}
++
+ static void uart2_write_char(char c) {
+   while ((USART2->ISR & USART_ISR_TXE_TXFNF) == 0U) {
+   }
+@@ -149,12 +158,30 @@
+ }
+ 
+ int main(void) {
++  static const uint16_t brr_candidates[] = {
++    139U,  /* 16 MHz  / 115200 */
++    35U,   /* 4 MHz   / 115200 */
++    69U,   /* 8 MHz   / 115200 */
++    208U,  /* 24 MHz  / 115200 */
++    417U,  /* 48 MHz  / 115200 */
++    694U,  /* 80 MHz  / 115200 */
++    1389U  /* 160 MHz / 115200 */
++  };
++  uint32_t i = 0U;
++
+   leds_init();
+-  uart2_init_115200_pd5_pd6();
++  uart2_init();
+ 
+   for (;;) {
++    /* Reapply 115200 BRR candidates so token is readable even if kernel clock differs. */
++    uart2_set_brr_and_enable((uint32_t)brr_candidates[i]);
++    i++;
++    if (i >= (sizeof(brr_candidates) / sizeof(brr_candidates[0]))) {
++      i = 0U;
++      led_green_toggle();
++    }
++
+     uart2_write_str(TOKEN);
+-    led_green_toggle();
+ 
+     {
+       char c;
+@@ -163,6 +190,6 @@
+       }
+     }
+ 
+-    delay(250000);
++    delay(90000);
+   }
+ }
+\ No newline at end of file

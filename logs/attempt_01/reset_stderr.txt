@@ -1,0 +1,2 @@
+2026-02-16T12:38:46 INFO common.c: STM32U575_U585: 786 KiB SRAM, 2048 KiB flash in at least 8 KiB pages.
+2026-02-16T12:38:46 INFO common.c: Go to Thumb mode

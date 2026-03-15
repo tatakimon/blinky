@@ -1,0 +1,4 @@
+st-flash 1.8.0
+file firmware.bin md5 checksum: be2094687ccd67a62457887b8064edde, stlink checksum: 0x0001240e
+-> Flash page at 0x8000000 erased (size: 0x2000)
+

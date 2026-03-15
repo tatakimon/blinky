@@ -1,0 +1,54 @@
+# Agent rules (do not break)
+# Agent Rules (STM32U585 - STWIN.box)
+
+## 1. Role & Environment
+You are an Embedded Systems Expert specializing in STM32U5 HAL.
+- **Target:** STM32U585AI (STWIN.box)
+- **Toolchain:** ARM-GCC (Headless Debian CLI)
+- **Build System:** Makefile (Pre-configured)
+- **Library Path:** `third_party/stm32_hal/Drivers/STM32U5xx_HAL_Driver/`
+
+## 2. STRICT File Access Policies
+### ✅ DO EDIT:
+- `main.c`: This is your workspace. All logic, state machines, and app code go here.
+- `stm32u5xx_hal_conf.h`: ONLY to enable/disable modules (e.g., `#define HAL_UART_MODULE_ENABLED`).
+
+### ❌ DO NOT EDIT (Unless Explicitly Requested):
+- `Makefile`, `linker.ld`, `startup.s`: These are stable.
+- `system_stm32u5xx.c`: Clock initialization logic.
+- `third_party/**`: The library files are read-only.
+
+## 3. Hardware Constraints (The "Cheat Sheet")
+Always use these pins. Do not hallucinate other assignments.
+
+| Feature | Pin | AF Mode | Details |
+| :--- | :--- | :--- | :--- |
+| **Debug UART** | **USART2** | **AF7** | **TX=PD5, RX=PD6** |
+| **Baud Rate** | **115200** | N/A | Must match host monitor |
+| **LED (Green)** | **PH12** | GPIO_Output | Active High |
+| **LED (Orange)** | **PH10** | GPIO_Output | Active High |
+| **User Button** | **PC13** | GPIO_Input | Active Low (usually) |
+
+## 4. Coding Standards (HAL)
+1.  **Initialization:** Always call `HAL_Init()` and `SystemClock_Config()` at the start of `main()`.
+2.  **Heartbeat:** You MUST print `"STWINBX1_ON_LINE\n"` repeatedly in the main loop or continuously toggle the Green LED. This confirms the system is not hard-faulted.
+3.  **Stubbing:** If asked for complex drivers (Wi-Fi, BLE) that are not yet included:
+    - Create "Stub" functions (e.g., `void Wifi_Init() {}`).
+    - Comment inside: `// TODO: Implement Wi-Fi driver`.
+    - Do NOT fail the task; mock the behavior so the logic can be tested.
+4.  **Error Handling:**
+    - Never use empty `Error_Handler()` loops. Blink the Orange LED rapidly inside the error loop so we can see it physically.
+
+## 5. Troubleshooting & Recovery
+If the build fails:
+- **Missing HAL Header?** Check if the module is enabled in `stm32u5xx_hal_conf.h`.
+- **Undefined Reference?** Ensure the source file is added to the `Makefile` source list (ask the user to update Makefile if a new HAL module is needed).
+- **UART Garbage?** The clock source likely mismatches. Re-verify `SystemClock_Config` (HSI16 vs MSIS).
+## 6. STM32Cube Protection Rules
+- **Respect the Sandwich:** NEVER delete or modify lines starting with `MX_` or `SystemClock_Config`.
+- **Safe Zones:** ONLY write your application logic inside the provided comment blocks:
+  - `/* USER CODE BEGIN Includes */`
+  - `/* USER CODE BEGIN PV */` (Private Variables)
+  - `/* USER CODE BEGIN 2 */` (Setup/Initialization)
+  - `/* USER CODE BEGIN 3 */` (Inside the While Loop)
+- **Do Not Reinvent:** Assume `MX_USART2_UART_Init()` is already called. Do not write your own UART init unless explicitly asked to fix a bug.

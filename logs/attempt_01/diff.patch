@@ -1,0 +1,334 @@
+--- /home/kerem/stm32_sim_lab/blinky/versions/attempt_01/pre/main.c	2026-02-17 15:50:53.195815290 +0100
++++ /home/kerem/stm32_sim_lab/blinky/versions/attempt_01/post/main.c	2026-02-17 16:19:07.094779400 +0100
+@@ -1,208 +1,148 @@
+ #include <stdint.h>
+ 
+-/*
+-  STM32U575/U585 bare-metal demo (no HAL):
+-  - USART2 on PD5 (TX) / PD6 (RX) AF7
+-  - Token printed repeatedly: STWINBX1_ON_LINE\n
+-  - LEDs: PH12 (green) heartbeat, PH10 (orange) RX/ack
+-*/
+-
+-/* ---- NOTE ----
+-   This file expects that your project already had working register-level init.
+-   If your previous main.c was working, keep its RCC/GPIO/USART init and only keep
+-   the LED + loop behavior below.
+-*/
+-
+ #define TOKEN "STWINBX1_ON_LINE\n"
+-/* -------- Peripheral base addresses (STM32U5 non-secure aliasing style) -------- */
+-#define RCC_BASE        0x40021000UL
+-#define USART2_BASE     0x40004400UL
+ 
+-/* On STM32U5 families, GPIO are on AHB2 with TrustZone aliasing.
+-   Non-secure GPIO base commonly maps to 0x42020000 region. */
++/* STM32U575/U585 base addresses */
++#define RCC_BASE        0x46020C00UL
++#define USART2_BASE     0x40004400UL
+ #define GPIO_AHB2_BASE  0x42020000UL
+ #define GPIOD_BASE      (GPIO_AHB2_BASE + 0x0C00UL)
+ #define GPIOH_BASE      (GPIO_AHB2_BASE + 0x1C00UL)
+ 
+-/* -------- Register structs -------- */
++/* RCC register offsets */
++#define RCC_CR          (*(volatile uint32_t *)(RCC_BASE + 0x000UL))
++#define RCC_AHB2ENR1    (*(volatile uint32_t *)(RCC_BASE + 0x08CUL))
++#define RCC_APB1ENR1    (*(volatile uint32_t *)(RCC_BASE + 0x09CUL))
++#define RCC_CCIPR1      (*(volatile uint32_t *)(RCC_BASE + 0x0D4UL))
++
++/* RCC bits */
++#define RCC_CR_HSION                (1UL << 8)
++#define RCC_CR_HSIRDY               (1UL << 10)
++#define RCC_AHB2ENR1_GPIODEN        (1UL << 3)
++#define RCC_AHB2ENR1_GPIOHEN        (1UL << 7)
++#define RCC_APB1ENR1_USART2EN       (1UL << 17)
++#define RCC_CCIPR1_USART2SEL_Pos    2U
++#define RCC_CCIPR1_USART2SEL_Msk    (3UL << RCC_CCIPR1_USART2SEL_Pos)
++#define RCC_CCIPR1_USART2SEL_HSI16  (2UL << RCC_CCIPR1_USART2SEL_Pos)
++
++/* USART bits */
++#define USART_CR1_UE                (1UL << 0)
++#define USART_CR1_RE                (1UL << 2)
++#define USART_CR1_TE                (1UL << 3)
++#define USART_ISR_RXNE_RXFNE        (1UL << 5)
++#define USART_ISR_TC                (1UL << 6)
++#define USART_ISR_TXE_TXFNF         (1UL << 7)
++
++/* GPIO + USART register layout */
+ typedef struct {
+-  volatile uint32_t MODER;    /* 0x00 */
+-  volatile uint32_t OTYPER;   /* 0x04 */
+-  volatile uint32_t OSPEEDR;  /* 0x08 */
+-  volatile uint32_t PUPDR;    /* 0x0C */
+-  volatile uint32_t IDR;      /* 0x10 */
+-  volatile uint32_t ODR;      /* 0x14 */
+-  volatile uint32_t BSRR;     /* 0x18 */
+-  volatile uint32_t LCKR;     /* 0x1C */
+-  volatile uint32_t AFR[2];   /* 0x20, 0x24 */
+-  volatile uint32_t BRR;      /* 0x28 */
++  volatile uint32_t MODER;
++  volatile uint32_t OTYPER;
++  volatile uint32_t OSPEEDR;
++  volatile uint32_t PUPDR;
++  volatile uint32_t IDR;
++  volatile uint32_t ODR;
++  volatile uint32_t BSRR;
++  volatile uint32_t LCKR;
++  volatile uint32_t AFR[2];
++  volatile uint32_t BRR;
+ } GPIO_TypeDef;
+ 
+ typedef struct {
+-  volatile uint32_t CR1;  /* 0x00 */
+-  volatile uint32_t CR2;  /* 0x04 */
+-  volatile uint32_t CR3;  /* 0x08 */
+-  volatile uint32_t BRR;  /* 0x0C */
+-  volatile uint32_t GTPR; /* 0x10 */
+-  volatile uint32_t RTOR; /* 0x14 */
+-  volatile uint32_t RQR;  /* 0x18 */
+-  volatile uint32_t ISR;  /* 0x1C */
+-  volatile uint32_t ICR;  /* 0x20 */
+-  volatile uint32_t RDR;  /* 0x24 */
+-  volatile uint32_t TDR;  /* 0x28 */
++  volatile uint32_t CR1;
++  volatile uint32_t CR2;
++  volatile uint32_t CR3;
++  volatile uint32_t BRR;
++  volatile uint32_t GTPR;
++  volatile uint32_t RTOR;
++  volatile uint32_t RQR;
++  volatile uint32_t ISR;
++  volatile uint32_t ICR;
++  volatile uint32_t RDR;
++  volatile uint32_t TDR;
++  volatile uint32_t PRESC;
++  volatile uint32_t AUTOCR;
+ } USART_TypeDef;
+ 
++#define GPIOD   ((GPIO_TypeDef *)GPIOD_BASE)
++#define GPIOH   ((GPIO_TypeDef *)GPIOH_BASE)
++#define USART2  ((USART_TypeDef *)USART2_BASE)
++
++static void delay(volatile uint32_t n) {
++  while (n--) {
++    __asm volatile ("nop");
++  }
++}
+ 
+-
+-#define GPIOD   ((GPIO_TypeDef*)GPIOD_BASE)
+-#define GPIOH   ((GPIO_TypeDef*)GPIOH_BASE)
+-#define USART2  ((USART_TypeDef*)USART2_BASE)
+-
+-/* -------- RCC registers we need (RM0456 offsets) -------- */
+-#define RCC_CR          (*(volatile uint32_t*)(RCC_BASE + 0x000UL))
+-#define RCC_AHB2ENR1    (*(volatile uint32_t*)(RCC_BASE + 0x08CUL))
+-#define RCC_APB1ENR1    (*(volatile uint32_t*)(RCC_BASE + 0x09CUL))
+-#define RCC_CCIPR1      (*(volatile uint32_t*)(RCC_BASE + 0x0D4UL))
+-
+-/* -------- Bit definitions (minimal set) -------- */
+-/* HSI16 enable/ready bits (common STM32 pattern: HSION bit8, HSIRDY bit10) */
+-#define RCC_CR_HSION        (1U << 8)
+-#define RCC_CR_HSIRDY       (1U << 10)
+-
+-/* AHB2ENR1 GPIO enables */
+-#define RCC_AHB2ENR1_GPIODEN (1U << 3)
+-#define RCC_AHB2ENR1_GPIOHEN (1U << 7)
+-
+-/* APB1ENR1 USART2 enable */
+-#define RCC_APB1ENR1_USART2EN (1U << 17)
+-
+-/* CCIPR1 USART2SEL bits are [3:2]; 10 selects HSI16  */
+-#define RCC_CCIPR1_USART2SEL_Pos 2U
+-#define RCC_CCIPR1_USART2SEL_Msk (3U << RCC_CCIPR1_USART2SEL_Pos)
+-#define RCC_CCIPR1_USART2SEL_HSI16 (2U << RCC_CCIPR1_USART2SEL_Pos)
+-
+-/* USART CR1 */
+-#define USART_CR1_UE   (1U << 0)
+-#define USART_CR1_RE   (1U << 2)
+-#define USART_CR1_TE   (1U << 3)
+-
+-/* USART ISR bits */
+-#define USART_ISR_RXNE_RXFNE (1U << 5)
+-#define USART_ISR_TC         (1U << 6)
+-#define USART_ISR_TXE_TXFNF  (1U << 7)
+-#define USART_ISR_TEACK      (1U << 21)
+-#define USART_ISR_REACK      (1U << 22)
+-
+-
+-/* Simple busy-wait */
+-static void delay(volatile uint32_t n) { while (n--) { __asm volatile ("nop"); } }
+-
+-/* ======= YOU MUST KEEP YOUR WORKING LOW-LEVEL INIT HERE =======
+-   If your old main.c already had:
+-   - HSI16 enable (or correct USART2 kernel clock)
+-   - GPIOD clock enable
+-   - USART2 clock enable + PD5/PD6 AF7 setup
+-   - USART2 BRR for 115200
+-   then KEEP it and remove this comment.
+-*/
+-/* Placeholders so the file compiles even before you paste your known-good init.
+-   Replace these with your known-good functions (from your working main.c). */
+-
+-
+-/* -------- LED helpers (PH12 green, PH10 orange) -------- */
+ static void leds_init(void) {
+-  /* Enable GPIOH clock */
+   RCC_AHB2ENR1 |= RCC_AHB2ENR1_GPIOHEN;
+ 
+-  /* PH12, PH10 as output (MODER = 01) */
+-  GPIOH->MODER &= ~((3U << (12U*2U)) | (3U << (10U*2U)));
+-  GPIOH->MODER |=  ((1U << (12U*2U)) | (1U << (10U*2U)));
+-
+-  /* Push-pull */
+-  GPIOH->OTYPER &= ~((1U << 12U) | (1U << 10U));
+-
+-  /* Medium/high speed (optional) */
+-  GPIOH->OSPEEDR |= ((2U << (12U*2U)) | (2U << (10U*2U)));
+-
+-  /* No pull */
+-  GPIOH->PUPDR &= ~((3U << (12U*2U)) | (3U << (10U*2U)));
++  /* PH12 green, PH10 orange -> output mode */
++  GPIOH->MODER &= ~((3UL << (12U * 2U)) | (3UL << (10U * 2U)));
++  GPIOH->MODER |=  ((1UL << (12U * 2U)) | (1UL << (10U * 2U)));
++
++  GPIOH->OTYPER &= ~((1UL << 12U) | (1UL << 10U));
++  GPIOH->OSPEEDR |= ((2UL << (12U * 2U)) | (2UL << (10U * 2U)));
++  GPIOH->PUPDR &= ~((3UL << (12U * 2U)) | (3UL << (10U * 2U)));
+ 
+-  /* Start low */
+-  GPIOH->BSRR = (1U << (12U + 16U)) | (1U << (10U + 16U));
++  GPIOH->BSRR = (1UL << (12U + 16U)) | (1UL << (10U + 16U));
+ }
+ 
+ static void led_green_toggle(void) {
+-  GPIOH->ODR ^= (1U << 12U);
++  GPIOH->ODR ^= (1UL << 12U);
+ }
+ 
+ static void led_orange_pulse(void) {
+-  GPIOH->BSRR = (1U << 10U);
+-  delay(150000);
+-  GPIOH->BSRR = (1U << (10U + 16U));
++  GPIOH->BSRR = (1UL << 10U);
++  delay(120000);
++  GPIOH->BSRR = (1UL << (10U + 16U));
+ }
+ 
+-static void led_green_blink3(void) {
+-  for (int i = 0; i < 3; i++) {
+-    GPIOH->BSRR = (1U << 12U);
+-    delay(200000);
+-    GPIOH->BSRR = (1U << (12U + 16U));
+-    delay(200000);
+-  }
+-}
+-
+-/* -------- USART2 on PD5/PD6 AF7 @115200 -------- */
+ static void uart2_init_115200_pd5_pd6(void) {
+-  /* Ensure HSI16 running */
+   RCC_CR |= RCC_CR_HSION;
+-  while ((RCC_CR & RCC_CR_HSIRDY) == 0U) { }
++  while ((RCC_CR & RCC_CR_HSIRDY) == 0U) {
++  }
+ 
+-  /* Enable GPIOD + USART2 clocks */
+   RCC_AHB2ENR1 |= RCC_AHB2ENR1_GPIODEN;
+   RCC_APB1ENR1 |= RCC_APB1ENR1_USART2EN;
+ 
+-  /* Select HSI16 as USART2 kernel clock */
+   RCC_CCIPR1 = (RCC_CCIPR1 & ~RCC_CCIPR1_USART2SEL_Msk) | RCC_CCIPR1_USART2SEL_HSI16;
+ 
+-  /* PD5/PD6 alternate function AF7 */
+-  GPIOD->MODER &= ~((3U << (5U*2U)) | (3U << (6U*2U)));
+-  GPIOD->MODER |=  ((2U << (5U*2U)) | (2U << (6U*2U)));
+-
+-  /* AFRL for pins 5 and 6 = AF7 */
+-  GPIOD->AFR[0] &= ~((0xFU << (5U*4U)) | (0xFU << (6U*4U)));
+-  GPIOD->AFR[0] |=  ((7U  << (5U*4U)) | (7U  << (6U*4U)));
+-
+-  /* Speed high-ish */
+-  GPIOD->OSPEEDR |= ((3U << (5U*2U)) | (3U << (6U*2U)));
++  /* PD5/PD6 alternate function AF7 (USART2 TX/RX) */
++  GPIOD->MODER &= ~((3UL << (5U * 2U)) | (3UL << (6U * 2U)));
++  GPIOD->MODER |=  ((2UL << (5U * 2U)) | (2UL << (6U * 2U)));
++
++  GPIOD->OTYPER &= ~((1UL << 5U) | (1UL << 6U));
++  GPIOD->OSPEEDR |= ((3UL << (5U * 2U)) | (3UL << (6U * 2U)));
++  GPIOD->PUPDR &= ~((3UL << (5U * 2U)) | (3UL << (6U * 2U)));
+ 
+-  /* No pull-ups by default (you can add if needed) */
+-  GPIOD->PUPDR &= ~((3U << (5U*2U)) | (3U << (6U*2U)));
++  GPIOD->AFR[0] &= ~((0xFUL << (5U * 4U)) | (0xFUL << (6U * 4U)));
++  GPIOD->AFR[0] |=  ((7UL   << (5U * 4U)) | (7UL   << (6U * 4U)));
+ 
+-  /* Configure USART2: 16MHz / 115200 ~= 138.89 -> BRR=139 */
+   USART2->CR1 = 0U;
+   USART2->CR2 = 0U;
+   USART2->CR3 = 0U;
+-  USART2->BRR = 139U;
++  USART2->PRESC = 0U;   /* /1 prescaler */
++  USART2->BRR = 139U;   /* 16 MHz / 115200 */
+   USART2->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+-
+-  while ((USART2->ISR & USART_ISR_TEACK) == 0U) { }
+-  while ((USART2->ISR & USART_ISR_REACK) == 0U) { }
+ }
+ 
+ static void uart2_write_char(char c) {
+-  while ((USART2->ISR & USART_ISR_TXE_TXFNF) == 0U) { }
++  while ((USART2->ISR & USART_ISR_TXE_TXFNF) == 0U) {
++  }
+   USART2->TDR = (uint8_t)c;
+ }
+ 
+ static void uart2_write_str(const char *s) {
+-  while (*s) {
++  while (*s != '\0') {
+     uart2_write_char(*s++);
+   }
+-  while ((USART2->ISR & USART_ISR_TC) == 0U) { }
++  while ((USART2->ISR & USART_ISR_TC) == 0U) {
++  }
+ }
+ 
+ static int uart2_try_read_char(char *out) {
+-  if (USART2->ISR & USART_ISR_RXNE_RXFNE) {
+-    *out = (char)(USART2->RDR & 0xFF);
++  if ((USART2->ISR & USART_ISR_RXNE_RXFNE) != 0U) {
++    *out = (char)(USART2->RDR & 0xFFU);
+     return 1;
+   }
+   return 0;
+@@ -210,24 +150,19 @@
+ 
+ int main(void) {
+   leds_init();
+-  led_green_blink3();
+-
+   uart2_init_115200_pd5_pd6();
+ 
+-  /* Print immediately, then keep printing so host can't miss it */
+   for (;;) {
+     uart2_write_str(TOKEN);
+     led_green_toggle();
+ 
+-    /* Optional RX validation: send 'p' from host, get PONG + orange pulse */
+-    char c;
+-    if (uart2_try_read_char(&c)) {
+-      if (c == 'p') {
+-        uart2_write_str("PONG\n");
++    {
++      char c;
++      if (uart2_try_read_char(&c) && c == 'p') {
+         led_orange_pulse();
+       }
+     }
+ 
+-    delay(600000); /* tune */
++    delay(250000);
+   }
+-}
++}
+\ No newline at end of file

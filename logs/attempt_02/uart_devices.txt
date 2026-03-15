@@ -1,0 +1,1 @@
+/dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0047001F3133511037363734-if01
