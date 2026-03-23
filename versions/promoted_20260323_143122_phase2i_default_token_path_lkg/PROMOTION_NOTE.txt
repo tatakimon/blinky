@@ -1,0 +1,4 @@
+First explicit promoted LKG for this working copy after successful Phase 2i default-token-path proof on 2026-03-23.
+Canonical token: STWINBX1_ON_LINE
+Report: logs/closed_loop_report_20260323_143122.md
+Host/evidence context: proven host configuration for /home/kerem/new_embedder_codex_app_gsd/blinky
