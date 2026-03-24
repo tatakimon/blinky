@@ -115,8 +115,9 @@ Canonical token policy:
 ## Quarantined Helper
 - `tools/closed_loop_codex_verbose.py` is a quarantined non-primary helper.
 - It is not part of the trusted Layer A workflow (`deploy.sh` -> `autofix.sh` -> `test_runner.py`).
+- For this working copy, treat it as archival/non-primary unless a later controlled phase explicitly revives it.
 - It currently fails `python3 -m py_compile` with `TabError`.
-- Do not use it for baseline/LKG decisions unless it is later explicitly rehabilitated.
+- Do not use it for baseline/LKG or promotion decisions unless it is later explicitly rehabilitated.
 
 ## Success Criteria
 Success means both of these are true:

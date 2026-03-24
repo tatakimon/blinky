@@ -1,9 +1,9 @@
 # Project State — STM32U585 Closed Loop
 
-Updated: 2026-03-23 (Phase 2j default-token-path proof recorded and first promoted LKG created)
+Updated: 2026-03-24 (Phase 3a Layer B invocation-contract preparation opened)
 
 ## Current Phase
-Phase 2j: record the successful default-token-path proof and create the first explicit promoted snapshot/LKG entry; no firmware feature work.
+Phase 3a: define the minimal Layer B -> Layer A invocation contract without changing trusted Layer A behavior; no firmware feature work.
 
 ## Repo Authority And Path
 - Current authoritative working repo context for this working copy is `/home/kerem/new_embedder_codex_app_gsd/blinky`.
@@ -23,6 +23,8 @@ Earlier March 8 reports remain historical audit lineage for this line of work:
 - `logs/closed_loop_report_20260308_165114.md`
 
 This statement is limited to the verified host configuration used for those runs. It does not generalize to other hosts without new evidence.
+
+Phase 2 contradiction-cleanup work is effectively complete for this working copy. Layer A is stable and proven here, so the next preparation step moves to Layer B boundary definition rather than more cleanup sweeps.
 
 ## Trusted Baseline / LKG Identity
 - Current trusted baseline/LKG for this working copy is anchored by:
@@ -61,6 +63,11 @@ This statement is limited to the verified host configuration used for those runs
   - `logs/closed_loop_report_20260323_143122.md`
   - `UART token source: default`
   - `TRY 1/5: codex=OK build=OK flash=OK flash_verify=OK uart=OK`
+
+## Quarantined Helper Disposition
+- `tools/closed_loop_codex_verbose.py` remains under quarantine.
+- For this working copy it is archival/non-primary unless a later controlled phase explicitly revives it.
+- It must not be treated as part of the trusted Layer A workflow or used for baseline/LKG or promotion decisions.
 
 ## Controlled Token-Default Alignment Checklist
 1. Preserve pre-change evidence before implementation begins: keep the root control-file record of the historical 2026-03-08 report lineage, the current `## Current Promoted LKG Record` status, and the current mismatch statement intact until the later implementation result is proven.
@@ -101,8 +108,9 @@ This statement is limited to the verified host configuration used for those runs
 - Quarantined helper status is now explicit:
   - `tools/closed_loop_codex_verbose.py` is non-primary
   - it is not part of the trusted Layer A workflow
+  - it is archival/non-primary for this working copy unless a later controlled phase explicitly revives it
   - `python3 -m py_compile tools/closed_loop_codex_verbose.py` currently fails with `TabError`
-  - it must not be used for baseline/LKG decisions unless later explicitly rehabilitated
+  - it must not be used for baseline/LKG or promotion decisions unless later explicitly rehabilitated
 - Historical successful report remains:
   - `logs/closed_loop_report_20260224_114152.md`
   - Attempt summary shows: `codex=OK build=OK flash=OK flash_verify=OK uart=OK`
@@ -203,9 +211,9 @@ This statement is limited to the verified host configuration used for those runs
 - Token-default alignment risk is closed for this working copy:
   - the aligned defaults are proven through `logs/closed_loop_report_20260323_143122.md` and recorded in the promoted LKG snapshot
 - Stale helper-script risk:
-  - `tools/closed_loop_codex_verbose.py` is now quarantined rather than trusted, but still remains a confusion risk until its longer-term disposition is decided.
+  - `tools/closed_loop_codex_verbose.py` is now quarantined and explicitly treated as archival/non-primary for this working copy unless a later controlled phase revives it.
 - Auditability risk:
   - git now exists at repo root, but earlier baseline rollback and audit still rely primarily on `versions/` snapshots and preserved run logs because the git history starts later.
 
 ## Next Exact Action
-Write the small disposition note for `tools/closed_loop_codex_verbose.py` so future sessions know whether it will be rehabilitated or archived, without changing the trusted Layer A workflow.
+Write the minimal Layer B -> Layer A invocation contract in the root control files: what Layer B passes into `deploy.sh`, what evidence it must read back from Layer A, and what it must not bypass in the trusted `deploy.sh` -> `autofix.sh` -> `test_runner.py` path.

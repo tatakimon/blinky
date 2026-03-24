@@ -1,10 +1,10 @@
 # TODO.md
 
 ## Active Task
-Phase 2j: record the successful default-token-path proof and create the first explicit promoted LKG entry.
+Phase 3a: define the minimal Layer B -> Layer A invocation contract without changing trusted Layer A behavior.
 
 ## Objective
-Record that the Layer A default-token alignment is now implemented and proven, and create the first explicit promoted snapshot/LKG record under the existing convention without changing workflow behavior.
+Phase 2 contradiction-cleanup work is complete enough for this working copy; close that loop and define the first low-risk Layer B preparation boundary for how a future outer agent may call Layer A.
 
 ## Constraints
 - Keep the current repo structure at `/home/kerem/new_embedder_codex_app_gsd/blinky`
@@ -17,11 +17,11 @@ Record that the Layer A default-token alignment is now implemented and proven, a
 - Treat Layer A as frozen trusted substrate on the proven host configuration
 
 ## Acceptance Criteria
-- `TODO.md` reflects Phase 2j rather than the completed Phase 2i proof-handoff step
-- The authoritative root control files state that default-token alignment is implemented and proven
-- The successful proof report `logs/closed_loop_report_20260323_143122.md` is explicitly referenced
-- The first explicit promoted snapshot/LKG entry is recorded under the existing `versions/promoted_.../` convention
-- March 8 evidence remains historical audit lineage and is not rewritten as the new proof
+- `TODO.md` reflects Phase 3a rather than the completed Phase 2 contradiction-cleanup sweep
+- Phase 2 contradiction-cleanup work is effectively complete for this working copy
+- Layer A remains stable and proven for this working copy
+- The next step is documentation-only and defines the minimal Layer B -> Layer A invocation contract
+- `TODO.md` advances to one concrete next exact action for writing that contract
 - Historical `Kerem` evidence remains historical only and is not used as normal operational fallback
 - `tools/closed_loop_codex_verbose.py` remains explicitly classified as quarantined, non-primary, and not part of the trusted Layer A path
 - Canonical token policy remains unchanged in this phase:
@@ -32,9 +32,11 @@ Record that the Layer A default-token alignment is now implemented and proven, a
 ## Blockers
 - No current Layer A blocker on the proven host.
 - Main remaining structural risks before later Layer B work:
-  - stale helper `tools/closed_loop_codex_verbose.py`
-  - long-term disposition of the quarantined helper remains undecided
+  - stale helper `tools/closed_loop_codex_verbose.py` remains archival/non-primary until a later controlled revival phase is explicitly approved
   - future Layer A changes must continue to preserve the promoted snapshot/LKG record and report-backed evidence discipline
+  - future doc maintenance should keep secondary descriptive aids synchronized with the authoritative root control files
+  - future historical references to `SoS` should remain clearly marked as legacy context rather than current behavior
+  - Layer B still needs an explicit invocation contract for how it calls Layer A without bypassing trusted evidence flow
 
 ## Latest Evidence
 - Successful Phase 2i default-token-path proof report:
@@ -59,4 +61,4 @@ Record that the Layer A default-token alignment is now implemented and proven, a
   - the mutable live tree at `Dell_2_Steval/` is no longer described as permanent LKG identity
 
 ## Next Exact Action
-Write the small disposition note for `tools/closed_loop_codex_verbose.py` so future sessions know whether it will be rehabilitated or archived, without changing the trusted Layer A workflow.
+Write the minimal Layer B -> Layer A invocation contract in the root control files: what Layer B passes into `deploy.sh`, what evidence it must read back from Layer A, and what it must not bypass in the trusted `deploy.sh` -> `autofix.sh` -> `test_runner.py` path.
