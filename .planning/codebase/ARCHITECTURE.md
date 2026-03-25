@@ -1,4 +1,11 @@
 # Architecture
+## Authority Order
+- In the trusted operational repo context, authority order is: `AGENTS.md`, `TODO.md`, `PROJECT_STATE.md`, `RUNBOOK.md`.
+- Current phase, helper status, trusted baseline/LKG identity, token policy, and the next exact action must be taken from those root control files, not from this secondary codebase-map note.
+- Current authoritative working repo context for this working copy is `/home/kerem/new_embedder_codex_app_gsd/blinky`.
+- Earlier verified-host evidence from `~/stm32_sim_lab/blinky` remains historical audit lineage, not current repo authority for this working copy.
+- If this file is read from another checkout such as `/home/kerem/copy/blinky`, treat that checkout as a non-authoritative analysis copy.
+
 
 ## High-Level Model
 - The implemented system is a closed-loop firmware deployment workflow centered on a single firmware project in `Dell_2_Steval/`
@@ -38,13 +45,13 @@
 - Input intent enters through the `deploy.sh` task string
 - Operational parameters flow through CLI args and environment variables
 - Runtime evidence is captured into `logs/closed_loop_report_*.md`, `verbose.log`, `strategy_log.txt`, and `logs/attempt_*/`
-- Snapshot evidence flows into `versions/attempt_*/` and the preserved baseline tree under `versions/base_2026-02-23_dell2_steval/`
+- Snapshot evidence flows into `versions/attempt_*/`, the preserved baseline tree under `versions/base_2026-02-23_dell2_steval/`, and any future promoted snapshot paths recorded from the root control files
 
 ## Architectural Constraints
 - Real hardware proof is outside agent authority per `AGENTS.md`
 - Firmware edits are limited to `Dell_2_Steval/Core/Src/main.c` USER CODE blocks in firmware-change mode
 - Repo-maintenance work should stay in control files and small docs
-- Without git history, rollback architecture depends on snapshot directories and reports rather than VCS
+- Git now exists at repo root in this harmonized copy, but trusted rollback and LKG identity still depend first on preserved reports, promoted `versions/` snapshots, and recorded control-file state
 
 ## Secondary And Deprecated Paths
 - `tools/closed_loop_codex.py` models an older Python-driven loop and overlaps conceptually with `autofix.sh`

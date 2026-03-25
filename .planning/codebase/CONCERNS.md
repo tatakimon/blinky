@@ -1,9 +1,16 @@
 # Concerns
+## Authority Order
+- In the trusted operational repo context, authority order is: `AGENTS.md`, `TODO.md`, `PROJECT_STATE.md`, `RUNBOOK.md`.
+- Current phase, helper status, trusted baseline/LKG identity, token policy, and the next exact action must be taken from those root control files, not from this secondary codebase-map note.
+- Current authoritative working repo context for this working copy is `/home/kerem/new_embedder_codex_app_gsd/blinky`.
+- Earlier verified-host evidence from `~/stm32_sim_lab/blinky` remains historical audit lineage, not current repo authority for this working copy.
+- If this file is read from another checkout such as `/home/kerem/copy/blinky`, treat that checkout as a non-authoritative analysis copy.
+
 
 ## Highest-Risk Concerns
-- No git repository exists at `/home/kerem/copy/blinky`, so rollback and history depend on `versions/` snapshots and log discipline rather than VCS
+- Repo-root ambiguity is a documentation risk unless docs distinguish the current authoritative working repo `/home/kerem/new_embedder_codex_app_gsd/blinky` from earlier historical evidence origin at `~/stm32_sim_lab/blinky` and from non-authoritative analysis copies such as `/home/kerem/copy/blinky`
 - `tools/closed_loop_codex_verbose.py` is explicitly quarantined and currently fails `py_compile` with a `TabError` according to `TODO.md`, `PROJECT_STATE.md`, and `RUNBOOK.md`
-- Default token behavior is still inconsistent: `deploy.sh` and `autofix.sh` default to `SoS`, while `test_runner.py` defaults to `STWINBX1_ON_LINE`
+- Layer A default-token behavior is aligned and proven for this working copy: `deploy.sh`, `autofix.sh`, and `test_runner.py` all use `STWINBX1_ON_LINE` as the current canonical baseline token path; `SoS` remains legacy historical context only
 - Hardware success is host-specific and cannot be reproduced safely from a restricted agent session
 
 ## Repo Hygiene Issues
@@ -33,8 +40,8 @@
 - Because success claims are evidence-driven and host-specific, stale reports can be mistaken for current truth if control files are not kept current
 
 ## Recommended Follow-Up Areas
-- Normalize token defaults across Layer A scripts
-- Decide the long-term fate of `tools/closed_loop_codex_verbose.py`
+- Keep secondary descriptive docs aligned with the proven `STWINBX1_ON_LINE` default-token state and treat `SoS` as legacy historical context only
+- Keep `tools/closed_loop_codex_verbose.py` documented as archival/non-primary unless a later controlled phase explicitly revives it
 - Add a minimal dependency manifest for Python tooling
 - Reduce repo noise from Windows metadata sidecars and committed transient artifacts
 - Establish a clearer naming convention for promoted snapshots under `versions/`, which is already the next exact action in `TODO.md`

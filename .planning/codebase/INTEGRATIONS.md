@@ -1,7 +1,14 @@
 # Integrations
+## Authority Order
+- In the trusted operational repo context, authority order is: `AGENTS.md`, `TODO.md`, `PROJECT_STATE.md`, `RUNBOOK.md`.
+- Current phase, helper status, trusted baseline/LKG identity, token policy, and the next exact action must be taken from those root control files, not from this secondary codebase-map note.
+- Current authoritative working repo context for this working copy is `/home/kerem/new_embedder_codex_app_gsd/blinky`.
+- Earlier verified-host evidence from `~/stm32_sim_lab/blinky` remains historical audit lineage, not current repo authority for this working copy.
+- If this file is read from another checkout such as `/home/kerem/copy/blinky`, treat that checkout as a non-authoritative analysis copy.
+
 
 ## Scope
-- This document covers external systems, host interfaces, and optional service integrations referenced by the codebase rooted at `/home/kerem/copy/blinky`
+- This document covers external systems, host interfaces, and optional service integrations for the current authoritative working repo context at `/home/kerem/new_embedder_codex_app_gsd/blinky`
 
 ## Hardware Integrations
 - ST-LINK is the programming and probe path used by `autofix.sh` through `st-flash`

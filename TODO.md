@@ -1,10 +1,10 @@
 # TODO.md
 
 ## Active Task
-Phase 3a: define the minimal Layer B -> Layer A invocation contract without changing trusted Layer A behavior.
+Phase 3d: add a tiny built-in self-check for the non-executing Layer B TaskSpec stub.
 
 ## Objective
-Phase 2 contradiction-cleanup work is complete enough for this working copy; close that loop and define the first low-risk Layer B preparation boundary for how a future outer agent may call Layer A.
+The tiny non-executing stub now exists at `tools/layer_b_taskspec_stub.py`. The next low-risk step is adding a tiny built-in self-check in that same file that covers one successful normalization path and one refusal path without invoking `deploy.sh`.
 
 ## Constraints
 - Keep the current repo structure at `/home/kerem/new_embedder_codex_app_gsd/blinky`
@@ -12,16 +12,18 @@ Phase 2 contradiction-cleanup work is complete enough for this working copy; clo
 - Do not redesign docs or workflows
 - Do not modify STM32 generated code outside USER CODE blocks
 - Do not modify firmware or core workflow scripts in this phase
+- Only `tools/layer_b_taskspec_stub.py` is newly authorized for the next step, and it must remain non-executing
 - Do not rerun baseline in this phase
 - Treat hardware proof as authoritative only from operator-pasted unrestricted-host output
 - Treat Layer A as frozen trusted substrate on the proven host configuration
 
 ## Acceptance Criteria
-- `TODO.md` reflects Phase 3a rather than the completed Phase 2 contradiction-cleanup sweep
-- Phase 2 contradiction-cleanup work is effectively complete for this working copy
-- Layer A remains stable and proven for this working copy
-- The next step is documentation-only and defines the minimal Layer B -> Layer A invocation contract
-- `TODO.md` advances to one concrete next exact action for writing that contract
+- `TODO.md` reflects Phase 3d rather than the completed Phase 3c stub-implementation step
+- `tools/layer_b_taskspec_stub.py` exists and emits the documented TaskSpec fields
+- The stub remains non-executing and does not call Layer A or perform hardware access
+- No broader Layer B implementation authority is introduced in this update
+- The next step stays within the same stub file and adds a tiny built-in self-check
+- `TODO.md` advances to one concrete next exact action for that self-check step
 - Historical `Kerem` evidence remains historical only and is not used as normal operational fallback
 - `tools/closed_loop_codex_verbose.py` remains explicitly classified as quarantined, non-primary, and not part of the trusted Layer A path
 - Canonical token policy remains unchanged in this phase:
@@ -36,7 +38,7 @@ Phase 2 contradiction-cleanup work is complete enough for this working copy; clo
   - future Layer A changes must continue to preserve the promoted snapshot/LKG record and report-backed evidence discipline
   - future doc maintenance should keep secondary descriptive aids synchronized with the authoritative root control files
   - future historical references to `SoS` should remain clearly marked as legacy context rather than current behavior
-  - Layer B still needs an explicit invocation contract for how it calls Layer A without bypassing trusted evidence flow
+  - Layer B still needs a tiny built-in self-check that exercises one success path and one refusal path inside `tools/layer_b_taskspec_stub.py`
 
 ## Latest Evidence
 - Successful Phase 2i default-token-path proof report:
@@ -61,4 +63,4 @@ Phase 2 contradiction-cleanup work is complete enough for this working copy; clo
   - the mutable live tree at `Dell_2_Steval/` is no longer described as permanent LKG identity
 
 ## Next Exact Action
-Write the minimal Layer B -> Layer A invocation contract in the root control files: what Layer B passes into `deploy.sh`, what evidence it must read back from Layer A, and what it must not bypass in the trusted `deploy.sh` -> `autofix.sh` -> `test_runner.py` path.
+Add a tiny built-in self-check to `tools/layer_b_taskspec_stub.py` that demonstrates one successful normalization path and one refusal path without calling `deploy.sh`.

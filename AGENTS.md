@@ -54,6 +54,13 @@ Allowed files in this mode:
 - `planning.md`
 - `.gitignore`
 - small doc files under `docs/`
+- `.planning/codebase/*.md`
+
+Current narrow Layer B exception:
+- `tools/layer_b_taskspec_stub.py` is allowed for the current tiny non-executing stub step only.
+- It may normalize raw input into the documented TaskSpec fields only.
+- It must not call `deploy.sh`, `autofix.sh`, or `test_runner.py`.
+- It must not perform hardware access or weaken operator-authoritative proof boundaries.
 
 Do not modify workflow behavior in this mode unless explicitly requested.
 
@@ -77,3 +84,34 @@ Do not modify generated code outside user blocks unless explicitly requested.
 - Canonical current baseline token is `STWINBX1_ON_LINE`; `Kerem` is historical audit evidence only and `SoS` defaults remain deferred cleanup
 - Real hardware proof may require operator execution from an unrestricted host shell
 - Do not claim flash success, UART success, token success, or baseline success without operator-pasted and/or report-backed evidence
+
+
+## Closed-Loop Default + Physical Test Reminder Rule
+For future implementation, bugfix, and completion prompts in this repo:
+
+- Default to the existing trusted closed-loop path:
+  - code change (if needed)
+  - build
+  - flash
+  - readback verify
+  - UART/runtime verification
+  - report/log review
+- Try to carry the task as far as possible toward a finished, testable result within the trusted Layer A workflow.
+- Do not stop early at “code written” if the task is intended to be completed through the closed loop, unless a blocker prevents further progress.
+
+When the code reaches a state that is physically testable on the real board, stop and clearly tell the operator:
+
+`NOW TEST PLEASE`
+
+Then state:
+- what exactly should be tested on hardware
+- what success behavior is expected
+- what failure behavior would be important
+- which exact command(s) must be run if operator action is required
+- what exact output/report/log sections must be pasted back
+
+If real hardware proof or privileged access is needed, also emit:
+
+`OPERATOR ACTION REQUIRED`
+
+Do not claim real hardware success without operator-pasted or report-backed evidence.

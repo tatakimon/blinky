@@ -1,4 +1,11 @@
 # Conventions
+## Authority Order
+- In the trusted operational repo context, authority order is: `AGENTS.md`, `TODO.md`, `PROJECT_STATE.md`, `RUNBOOK.md`.
+- Current phase, helper status, trusted baseline/LKG identity, token policy, and the next exact action must be taken from those root control files, not from this secondary codebase-map note.
+- Current authoritative working repo context for this working copy is `/home/kerem/new_embedder_codex_app_gsd/blinky`.
+- Earlier verified-host evidence from `~/stm32_sim_lab/blinky` remains historical audit lineage, not current repo authority for this working copy.
+- If this file is read from another checkout such as `/home/kerem/copy/blinky`, treat that checkout as a non-authoritative analysis copy.
+
 
 ## Operational Conventions
 - Start by reading `AGENTS.md`, then `TODO.md`, `PROJECT_STATE.md`, `RUNBOOK.md`, `LESSONS.md`, `planning.md`, and optionally `README.md`

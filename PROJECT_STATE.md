@@ -1,9 +1,9 @@
 # Project State — STM32U585 Closed Loop
 
-Updated: 2026-03-24 (Phase 3a Layer B invocation-contract preparation opened)
+Updated: 2026-03-24 (Phase 3c stub implemented; Phase 3d self-check step opened)
 
 ## Current Phase
-Phase 3a: define the minimal Layer B -> Layer A invocation contract without changing trusted Layer A behavior; no firmware feature work.
+Phase 3d: add a tiny built-in self-check for the non-executing Layer B TaskSpec stub; no firmware feature work.
 
 ## Repo Authority And Path
 - Current authoritative working repo context for this working copy is `/home/kerem/new_embedder_codex_app_gsd/blinky`.
@@ -24,7 +24,9 @@ Earlier March 8 reports remain historical audit lineage for this line of work:
 
 This statement is limited to the verified host configuration used for those runs. It does not generalize to other hosts without new evidence.
 
-Phase 2 contradiction-cleanup work is effectively complete for this working copy. Layer A is stable and proven here, so the next preparation step moves to Layer B boundary definition rather than more cleanup sweeps.
+Phase 2 contradiction-cleanup work is effectively complete for this working copy. Layer A is stable and proven here. The minimal Layer B -> Layer A invocation contract and minimal Layer B TaskSpec generation contract are now recorded in the root control files, and the next preparation step moves to a tiny non-executing TaskSpec stub implementation.
+
+Current narrow Layer B implementation authority for this working copy is limited to `tools/layer_b_taskspec_stub.py` only. That stub may normalize raw input into the documented TaskSpec fields, but it must not call `deploy.sh`, `autofix.sh`, or `test_runner.py`, must not perform hardware access, and must not weaken operator-authoritative proof boundaries. The stub now exists and remains non-executing for this working copy.
 
 ## Trusted Baseline / LKG Identity
 - Current trusted baseline/LKG for this working copy is anchored by:
@@ -187,6 +189,28 @@ Phase 2 contradiction-cleanup work is effectively complete for this working copy
   - `autofix.sh` injects `UART_TOKEN` into `test_runner.py` invocation
   - `test_runner.py` fallback remains consistent for standalone invocation when `UART_TOKEN` is unset
 
+## Layer B TaskSpec Generation Contract
+- Raw Layer B input may include a user task/request string, explicit constraints or guardrails, an explicit UART-token instruction when needed, and explicit evidence expectations when the user or control files require them.
+- Before any call to `deploy.sh`, Layer B must normalize raw input into a TaskSpec containing exactly these fields: `task_intent`, `target_scope`, `allowed_edit_scope`, `uart_token_mode`, `uart_token_value`, `evidence_requirements`, `operator_action_required_conditions`, `execution_entrypoint`, and `refusal_conditions`.
+- `task_intent` preserves the requested work in execution-oriented form.
+- `target_scope` preserves the intended repo/module/file boundary for the task.
+- `allowed_edit_scope` preserves the maximum authorized edit boundary and must remain consistent with the root control-file constraints.
+- `uart_token_mode` records whether Layer A should use the canonical default path, an explicit token, or a no-override expectation; `uart_token_value` records the explicit token when one is required and otherwise records the canonical expectation `STWINBX1_ON_LINE` or an empty value when no explicit token is needed.
+- `evidence_requirements` preserves the minimum success evidence Layer B must read back from Layer A, including final terminal status, report path, report attempt summary, and matching `verbose.log` when needed.
+- `operator_action_required_conditions` preserves the exact conditions that require `OPERATOR ACTION REQUIRED`, including any real-hardware proof, privileged host action, or claim that depends on operator-pasted or report-backed evidence.
+- `execution_entrypoint` must remain `deploy.sh`; the TaskSpec must not authorize bypassing `deploy.sh` or weakening real-hardware proof requirements.
+- `refusal_conditions` must preserve when Layer B refuses to generate an execution TaskSpec. Layer B must refuse when raw intent is missing, materially ambiguous, unsafe, internally conflicting, outside the allowed edit scope, missing a required token expectation, missing required evidence expectations, or would require silently guessing inputs that would change execution meaning.
+
+## Layer B -> Layer A Invocation Contract
+- Layer B may invoke the trusted path only through `deploy.sh`.
+- Layer B may pass a task string, an explicit UART token when needed, and selected Layer A environment variables already supported in the working tree: `MAX_RETRIES`, `ENABLE_FLASH_READBACK_VERIFY`, `FLASH_RETRIES`, `FLASH_RETRY_DELAY`, `USE_SUDO_FLASH`, `UART_BAUD`, `UART_TIMEOUT`, and `UART_PORT`.
+- Layer B must read back the final terminal status line, the report path, the report attempt summary, and matching `verbose.log` when the report or terminal output alone is insufficient to explain the result.
+- Layer B must not bypass `deploy.sh`, the documented evidence requirements, or the operator-action boundary for real hardware proof.
+- Layer B must not treat direct calls to `autofix.sh` or `test_runner.py` as the normal trusted entrypoint for verified runs.
+- Real hardware proof remains operator-authoritative unless pasted unrestricted-host output and/or preserved report-backed evidence exists.
+- Success is evidence-based: Layer B may treat a run as successful only when terminal output ends with `SUCCESS | report=...` and the referenced report shows `PRECHECK: OK`, `build=OK`, `flash=OK`, `flash_verify=OK` when enabled, and `uart=OK`.
+- Failure or insufficient evidence includes any run with `FAILED | report=...`, any missing final status line or report path, any missing or incomplete attempt summary, any missing `verbose.log` when needed for diagnosis, or any claim inferred from code edits alone.
+
 ## Layer B Entry Contract
 - Input:
   - a task string for `deploy.sh`
@@ -216,4 +240,4 @@ Phase 2 contradiction-cleanup work is effectively complete for this working copy
   - git now exists at repo root, but earlier baseline rollback and audit still rely primarily on `versions/` snapshots and preserved run logs because the git history starts later.
 
 ## Next Exact Action
-Write the minimal Layer B -> Layer A invocation contract in the root control files: what Layer B passes into `deploy.sh`, what evidence it must read back from Layer A, and what it must not bypass in the trusted `deploy.sh` -> `autofix.sh` -> `test_runner.py` path.
+Add a tiny built-in self-check to `tools/layer_b_taskspec_stub.py` that demonstrates one successful normalization path and one refusal path without calling `deploy.sh`.

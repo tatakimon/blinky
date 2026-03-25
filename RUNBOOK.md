@@ -80,6 +80,21 @@ Canonical token policy:
 - `logs/closed_loop_report_YYYYMMDD_HHMMSS.md` (run report + attempt summary)
 - `/tmp/Dell_2_Steval.bin` and `/tmp/Dell_2_Steval.readback.bin` (temporary build/readback artifacts)
 
+## Layer B TaskSpec Boundary
+- Before a future Layer B component invokes `deploy.sh`, it must normalize raw user intent into a TaskSpec.
+- The normalized TaskSpec fields are: `task_intent`, `target_scope`, `allowed_edit_scope`, `uart_token_mode`, `uart_token_value`, `evidence_requirements`, `operator_action_required_conditions`, `execution_entrypoint`, and `refusal_conditions`.
+- The TaskSpec must preserve user task intent, target scope, allowed edit scope, UART token expectation, evidence requirements, and the operator-action boundary.
+- `execution_entrypoint` must remain `deploy.sh`; the TaskSpec must not authorize bypassing `deploy.sh` or weakening the documented real-hardware proof requirements.
+- If required inputs are insufficient or unsafe, Layer B must refuse to generate an execution TaskSpec rather than silently guessing.
+
+## Layer B Invocation Boundary
+- A future Layer B component may invoke the trusted path only through `deploy.sh`.
+- Allowed inputs are a task string, an explicit `UART_TOKEN` when needed, and selected environment variables already supported by Layer A: `MAX_RETRIES`, `ENABLE_FLASH_READBACK_VERIFY`, `FLASH_RETRIES`, `FLASH_RETRY_DELAY`, `USE_SUDO_FLASH`, `UART_BAUD`, `UART_TIMEOUT`, and `UART_PORT`.
+- Layer B must read back the final terminal status, the report path, the report attempt summary, and matching `verbose.log` when needed to explain the result.
+- Layer B must not bypass `deploy.sh`, the documented evidence requirements, or the operator-authoritative hardware-proof boundary.
+- Real hardware proof remains operator-authoritative unless pasted unrestricted-host output and/or preserved report-backed evidence exists.
+- Code edits alone are never sufficient success evidence for Layer B.
+
 ## Trusted Baseline / LKG Procedure
 - Current trusted baseline/LKG for this working copy is defined by this exact artifact set:
   - `logs/closed_loop_report_20260323_143122.md`

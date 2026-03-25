@@ -1,7 +1,14 @@
 # Stack
+## Authority Order
+- In the trusted operational repo context, authority order is: `AGENTS.md`, `TODO.md`, `PROJECT_STATE.md`, `RUNBOOK.md`.
+- Current phase, helper status, trusted baseline/LKG identity, token policy, and the next exact action must be taken from those root control files, not from this secondary codebase-map note.
+- Current authoritative working repo context for this working copy is `/home/kerem/new_embedder_codex_app_gsd/blinky`.
+- Earlier verified-host evidence from `~/stm32_sim_lab/blinky` remains historical audit lineage, not current repo authority for this working copy.
+- If this file is read from another checkout such as `/home/kerem/copy/blinky`, treat that checkout as a non-authoritative analysis copy.
+
 
 ## Scope
-- Codebase root mapped here: `/home/kerem/copy/blinky`
+- Codebase map scope follows the current authoritative working repo context at `/home/kerem/new_embedder_codex_app_gsd/blinky`; copied checkouts are descriptive only unless their root control files explicitly establish authority
 - Primary implemented workflow is Layer A: `deploy.sh` -> `autofix.sh` -> `test_runner.py`
 - Layer B exists as planning and helper scripts, not as the trusted production path
 
@@ -41,6 +48,7 @@
 - Runtime reports are stored under `logs/closed_loop_report_*.md`
 - Per-attempt diagnostics are stored under `logs/attempt_*/`
 - Snapshot artifacts are stored under `versions/attempt_*/` and `versions/base_2026-02-23_dell2_steval/`
+- Future promoted snapshots follow the root-control convention under `versions/promoted_YYYYMMDD_HHMMSS_<label>/`
 - Current run scratch artifacts are written to `/tmp`, including `/tmp/Dell_2_Steval.bin` and `/tmp/Dell_2_Steval.readback.bin`
 
 ## Configuration Sources
@@ -49,6 +57,6 @@
 - Control-file state is stored in `TODO.md`, `PROJECT_STATE.md`, `RUNBOOK.md`, `LESSONS.md`, and `planning.md`
 
 ## Notable Absences
-- No git repository at `/home/kerem/copy/blinky` according to `PROJECT_STATE.md`
+- Git now exists in the current harmonized repo copy, but trusted baseline/LKG identity still comes from preserved successful reports, promoted `versions/` snapshots, and recorded control-file state
 - No package manager manifest for Python dependencies
 - No CI configuration or automated test runner configuration file was found

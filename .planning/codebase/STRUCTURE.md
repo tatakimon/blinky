@@ -1,4 +1,11 @@
 # Structure
+## Authority Order
+- In the trusted operational repo context, authority order is: `AGENTS.md`, `TODO.md`, `PROJECT_STATE.md`, `RUNBOOK.md`.
+- Current phase, helper status, trusted baseline/LKG identity, token policy, and the next exact action must be taken from those root control files, not from this secondary codebase-map note.
+- Current authoritative working repo context for this working copy is `/home/kerem/new_embedder_codex_app_gsd/blinky`.
+- Earlier verified-host evidence from `~/stm32_sim_lab/blinky` remains historical audit lineage, not current repo authority for this working copy.
+- If this file is read from another checkout such as `/home/kerem/copy/blinky`, treat that checkout as a non-authoritative analysis copy.
+
 
 ## Root Layout
 - `AGENTS.md`: session rules, hardware authority limits, and edit-mode constraints
@@ -29,6 +36,7 @@
 - `logs/attempt_01/` through `logs/attempt_05/`: per-attempt build, flash, verify, and Codex artifacts
 - `versions/attempt_*/pre/` and `versions/attempt_*/post/`: before/after snapshots for loop attempts
 - `versions/base_2026-02-23_dell2_steval/`: preserved historical baseline snapshot
+- `versions/promoted_YYYYMMDD_HHMMSS_<label>/`: promoted snapshot location defined by the root control files when a future candidate is intentionally promoted
 
 ## Naming Patterns
 - Attempt artifacts use zero-padded suffixes such as `attempt_01`

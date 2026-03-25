@@ -1,4 +1,11 @@
 # Testing
+## Authority Order
+- In the trusted operational repo context, authority order is: `AGENTS.md`, `TODO.md`, `PROJECT_STATE.md`, `RUNBOOK.md`.
+- Current phase, helper status, trusted baseline/LKG identity, token policy, and the next exact action must be taken from those root control files, not from this secondary codebase-map note.
+- Current authoritative working repo context for this working copy is `/home/kerem/new_embedder_codex_app_gsd/blinky`.
+- Earlier verified-host evidence from `~/stm32_sim_lab/blinky` remains historical audit lineage, not current repo authority for this working copy.
+- If this file is read from another checkout such as `/home/kerem/copy/blinky`, treat that checkout as a non-authoritative analysis copy.
+
 
 ## Verification Model
 - This project relies primarily on hardware-in-the-loop verification, not unit tests
@@ -42,4 +49,5 @@
 - Fail fast on missing hardware or inaccessible ports before running the full retry loop
 - Distinguish build, flash, and UART stages clearly instead of treating them as one outcome
 - Preserve logs even on failure so later analysis can explain rejected candidates
-- Use snapshots under `versions/` as the rollback/testing history surrogate because there is no git history at repo root
+- Use snapshots under `versions/`, preserved successful reports, and recorded control-file state as the primary trusted rollback/testing lineage; current git history is supplementary and starts later
+- When a future snapshot is intentionally promoted, restore/reference behavior should follow `PROJECT_STATE.md` under `## Current Promoted LKG Record`
